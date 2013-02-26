@@ -7,12 +7,20 @@ import XMonad.Layout.Magnifier
 import XMonad.Layout.LimitWindows
 import XMonad.Layout.NoBorders
 import XMonad.Layout.FixedColumn
-import XMonad.Layout.ToggleLayouts
 import XMonad.Layout.NoFrillsDecoration
+import XMonad.Layout.MouseResizableTile
+import XMonad.Actions.CycleWindows
+import XMonad.Actions.CycleWS
+import XMonad.Actions.RotSlaves
+import XMonad.Layout.Renamed
+--import XMonad.Actions.UpdatePointer
+
 import qualified XMonad.StackSet as W -- to shift and float windows
- 
+import qualified Data.Map as M
+
 main = xmonad kde4Config
-    { modMask = mod4Mask -- use the Windows button as mod
+    { modMask = mod4Mask,-- use the Windows button as mod
+      keys = myKeys <+> keys kde4Config 
     , manageHook = manageHook kde4Config <+> myManageHook
     , layoutHook = myLayoutHook
     }
@@ -28,7 +36,33 @@ myManageHook = composeAll . concat $
         webApps       = ["Firefox-bin", "Opera"] -- open on desktop 2
         ircApps       = ["Ksirc"]                -- open on desktop 3
         
-twoPaneLayout = magnifiercz' 1.4 $ Tall nmaster delta ratio
+conditionalCycleUp = do	
+    theLayout <- gets $ description . W.layout . W.workspace . W.current . windowset
+    --spawn ("kdialog -msgbox " ++ theLayout)
+    case theLayout of
+      "twoPaneLayout" -> rotFocusedDown
+      _ -> rotAllDown	
+    
+conditionalCycleDown =  do 
+    theLayout <- gets $ description . W.layout . W.workspace . W.current . windowset
+    --spawn ("kdialog -msgbox " ++ theLayout)
+    case theLayout of
+	 "twoPaneLayout" -> rotFocusedDown
+	 _ -> rotAllDown
+
+myKeys (XConfig {modMask = modm}) = M.fromList $ 
+    [ ((mod4Mask, xK_space), sendMessage NextLayout),
+      ((mod1Mask, xK_Tab), conditionalCycleUp),
+      ((mod1Mask .|. shiftMask, xK_Tab), (conditionalCycleDown)),
+      ((controlMask , xK_Right), nextWS),
+      ((controlMask , xK_Left), prevWS),
+      ((controlMask .|. mod1Mask, xK_Right), shiftToNext),
+      ((controlMask .|. mod1Mask, xK_Left), shiftToPrev),
+      ((controlMask .|. mod1Mask .|. shiftMask, xK_Right), shiftToNext >> nextWS),
+      ((controlMask .|. mod1Mask .|. shiftMask, xK_Left), shiftToPrev >> prevWS)
+    ]
+    
+mySplitLayout = renamed [Replace "mySplitLayout"] $ deco shrinkText defaultTheme $ magnifiercz' 1.4 $ Tall nmaster delta ratio
     where
         -- The default number of windows in the master pane
         nmaster = 1
@@ -36,13 +70,11 @@ twoPaneLayout = magnifiercz' 1.4 $ Tall nmaster delta ratio
         delta   = 3/100
         -- Default proportion of screen occupied by master pane
         ratio   = 60/100
-        
-fullWithMagLayout = limitWindows 3 $ magnifiercz' 1.4 $ FixedColumn 1 20 80 10
-
-codeLayout = limitWindows 3 $ FixedColumn 1 20 80 10
+  
+twoPaneLayout = renamed [Replace "twoPaneLayout"] $ deco shrinkText defaultTheme $ limitWindows 2 $ mouseResizableTile { draggerType = BordersDragger}
 
 deco = noFrillsDeco
 
-myLayoutHook = desktopLayoutModifiers $ deco shrinkText defaultTheme $ smartBorders $ Full ||| fullWithMagLayout ||| twoPaneLayout ||| codeLayout ||| Grid  
+myLayoutHook = desktopLayoutModifiers $ smartBorders $ Full ||| mySplitLayout ||| twoPaneLayout ||| Grid  
 
         
