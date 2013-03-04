@@ -1,4 +1,6 @@
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, TypeSynonymInstances #-}
 import XMonad
+import XMonad.Core
 import XMonad.Config.Kde
 import XMonad.Layout
 import XMonad.Config.Desktop
@@ -7,12 +9,23 @@ import XMonad.Layout.Magnifier
 import XMonad.Layout.LimitWindows
 import XMonad.Layout.NoBorders
 import XMonad.Layout.FixedColumn
+import XMonad.Layout.Decoration
 import XMonad.Layout.NoFrillsDecoration
 import XMonad.Layout.MouseResizableTile
 import XMonad.Actions.CycleWindows
 import XMonad.Actions.CycleWS
 import XMonad.Actions.RotSlaves
 import XMonad.Layout.Renamed
+import XMonad.Layout.WindowSwitcherDecoration
+import XMonad.Layout.DraggingVisualizer
+import XMonad.Layout.LayoutModifier
+import XMonad.Layout.Named
+import XMonad.Layout.DraggableWindows (makeDraggable, makeDraggableWindowSwitcher)
+
+import qualified XMonad.StackSet as S
+import Control.Monad
+import Foreign.C.Types(CInt)
+
 --import XMonad.Actions.UpdatePointer
 
 import qualified XMonad.StackSet as W -- to shift and float windows
@@ -42,7 +55,7 @@ conditionalCycleUp = do
     case theLayout of
       "twoPaneLayout" -> rotFocusedDown
       _ -> rotAllDown	
-    
+          
 conditionalCycleDown =  do 
     theLayout <- gets $ description . W.layout . W.workspace . W.current . windowset
     --spawn ("kdialog -msgbox " ++ theLayout)
@@ -60,9 +73,11 @@ myKeys (XConfig {modMask = modm}) = M.fromList $
       ((controlMask .|. mod1Mask, xK_Left), shiftToPrev),
       ((controlMask .|. mod1Mask .|. shiftMask, xK_Right), shiftToNext >> nextWS),
       ((controlMask .|. mod1Mask .|. shiftMask, xK_Left), shiftToPrev >> prevWS)
-    ]
+    ]   
     
-mySplitLayout = renamed [Replace "mySplitLayout"] $ deco shrinkText defaultTheme $ magnifiercz' 1.4 $ Tall nmaster delta ratio
+myDeco=windowSwitcherDecoration shrinkText defaultTheme
+    
+mySplitLayout = named "mySplitLayout" $ myDeco $ draggingVisualizer $ magnifiercz' 1.4 $ Tall nmaster delta ratio
     where
         -- The default number of windows in the master pane
         nmaster = 1
@@ -70,11 +85,27 @@ mySplitLayout = renamed [Replace "mySplitLayout"] $ deco shrinkText defaultTheme
         delta   = 3/100
         -- Default proportion of screen occupied by master pane
         ratio   = 60/100
+    
+-- twoPaneLayout = named "twoPaneLayout" $ draggingVisualizer $ myDeco $ limitWindows 2 $ mouseResizableTile { draggerType = BordersDragger}
+twoPaneLayout = named "twoPaneLayout" $ limitWindows 2 $ myDeco $ draggingVisualizer $ mouseResizableTile{ nmaster = 1
+                                                                                                         , masterFrac = ratio
+                                                                                                         , slaveFrac = delta
+                                                                                                         , draggerType = BordersDragger} 
+  where
+                                                                                                           
+        -- Percent of screen to increment by when resizing panes
+        delta   = 3/100
+        -- Default proportion of screen occupied by master pane
+        ratio   = 60/100
   
-twoPaneLayout = renamed [Replace "twoPaneLayout"] $ deco shrinkText defaultTheme $ limitWindows 2 $ mouseResizableTile { draggerType = BordersDragger}
 
-deco = noFrillsDeco
+myLayoutHook =  desktopLayoutModifiers $ smartBorders $ Full ||| mySplitLayout ||| twoPaneLayout ||| Grid
 
-myLayoutHook = desktopLayoutModifiers $ smartBorders $ Full ||| mySplitLayout ||| twoPaneLayout ||| Grid  
+myMouseBindings (XConfig {XMonad.modMask = modMask}) = M.fromList $
+  [
 
-        
+    ((modMask, button2),
+       (\w -> focus w >> windows W.swapMaster))
+  
+    -- you may also bind events to the mouse scroll wheel (button4 and button5)
+  ]
