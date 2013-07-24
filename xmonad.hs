@@ -151,7 +151,7 @@ mySplitLayout = named "mySplitLayout" $ desktopLayoutModifiers $ myDeco $ minimi
         ratio   = 60/100
     
 -- twoPaneLayout = named "twoPaneLayout" $ draggingVisualizer $ myDeco $ limitWindows 2 $ mouseResizableTile { draggerType = BordersDragger}
-twoPaneLayout =  named "twoPaneLayout" $ limitWindows 2 $ desktopLayoutModifiers $ minimize $ maximize $ boringWindows $ myDeco $ smartBorders $ draggingVisualizer $ mouseResizableTile{ nmaster = 1
+twoPaneLayout =  named "twoPaneLayout" $ limitWindows 2 $ desktopLayoutModifiers $ minimize $ maximize $ myDeco $ smartBorders $ draggingVisualizer $ mouseResizableTile{ nmaster = 1
                                                                                                          , masterFrac = ratio
                                                                                                          , slaveFrac = delta
                                                                                                          , draggerType = BordersDragger} 
